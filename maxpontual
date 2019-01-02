@@ -1,0 +1,27 @@
+import matplotlib.pyplot as plt
+import numpy as np
+from astropy.io import fits
+from decimal import Decimal
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+
+
+spec, h = fits.getdata('Esp_Int2.fits', header=True)
+wave = np.arange(spec.size)*h['CDELT1']+h['CRVAL1']
+x=wave
+y=spec
+line, = ax.plot(x, y)
+
+ymax = max(y)
+xpos=np.argmax(y)
+xmax = x[np.nanargmax(y)]
+dec='%.2E' %Decimal(ymax)
+rod=round(xmax,0)
+
+ax.annotate( (rod , dec), xy=(xmax, ymax), xytext=(xmax, ymax+.00000000000005),
+            arrowprops=dict(facecolor='black', shrink=0.05),
+            )
+
+ax.set_ylim(0,.0000000000175)
+plt.show()
