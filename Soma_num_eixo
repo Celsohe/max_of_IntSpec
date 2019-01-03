@@ -1,0 +1,21 @@
+import matplotlib.pyplot as plt
+import numpy as np
+from astropy.io import fits as pyfits
+
+
+
+
+
+spec, h = pyfits.getdata('data_cubexx.fits', header=True)
+image=np.sum(spec,axis=0)
+
+hdu = pyfits.PrimaryHDU(image)
+
+hdul = pyfits.HDUList(hdu)
+
+hdul.append(pyfits.PrimaryHDU())
+
+for img in image:
+    hdul.append(pyfits.ImageHDU(data=img))
+    
+hdul.writeto('somageral.fits',overwrite=True)
