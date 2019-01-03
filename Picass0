@@ -1,0 +1,118 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Aug 22 04:47:31 2018
+
+@author: celso
+"""
+
+################################################################CubodeDados
+
+#Biblioteca
+
+import numpy as np
+from astropy.io import fits as pyfits
+from astropy.table import Table, Column
+import glob
+import os
+
+#deletando arquivos antigos
+lista=glob.glob('*.fits')
+if 'data_cube.fits' in lista:
+    os.remove("data_cube.fits")
+
+if 'data_cubexx.fits' in lista:
+    os.remove("data_cubexx.fits")
+
+
+#importar o cabeçalho
+s1, h1 = pyfits.getdata('ngc6445p1.fits',header=True)
+
+eixo1 = h1['NAXIS1'] #Número de pixels do eixo1
+eixo2 = h1['NAXIS2'] #Número de pixels do eixo2
+lamb0 = h1['CDELT2'] #Comprimento de onda inicialastropyfunction
+dlamb = h1['CRVAL2'] #Valor do angstron/pixel
+n_espct = 10 #número de imagens
+#Criar diretórios
+
+#os.mkdir('Fluxos') #Diretório para salvar os mapas de fluxo
+
+dir_flx = "./Fluxos"
+
+#os.mkdir('Erros') #Diretório para salvar os mapas de erro
+
+dir_err = "./Erros"
+
+data_cube = np.zeros(((n_espct,eixo2,eixo1))) #Matriz 3-d 
+
+#path = './home/celso/Desktop/imagens_alinhadas/teste1'
+
+files = glob.glob('*.fits')
+
+files.sort()
+
+i = 0
+
+
+for fitsName in files:
+    print fitsName
+    hdulist = pyfits.open(fitsName)
+    hdu = hdulist[0]
+    data_cube[i][:][:] = hdu.data[:][:]
+    i = i + 1
+
+data_cube=np.swapaxes(data_cube,0,2)
+data_cube=np.swapaxes(data_cube,0,1)
+data_cube=np.swapaxes(data_cube,1,2)
+
+hdu = pyfits.PrimaryHDU(data_cube)
+
+hdul = pyfits.HDUList(hdu)
+
+hdul.append(pyfits.PrimaryHDU())
+
+for img in data_cube:
+    hdul.append(pyfits.ImageHDU(data=img))
+    
+hdul.writeto('data_cube.fits')
+
+
+
+#################################################################Interpolação
+
+#Importar o cubo de dados
+s1, h1 = pyfits.getdata('data_cube.fits',header=True)
+s2, h2 = pyfits.getdata('ngc6445p1.fits',header=True)
+
+from scipy.ndimage import zoom
+ncube = zoom(s1, (1, 7.2, .56))
+
+hdu = pyfits.PrimaryHDU(ncube)
+
+hdul = pyfits.HDUList(hdu)
+
+hdul.append(pyfits.PrimaryHDU())
+
+for img in s1:
+    hdul.append(pyfits.ImageHDU(data=img))
+
+
+#cabeçalho
+hdu2 = pyfits.open('ngc6445p1.fits')
+hdu2[0].data=ncube
+hdu2[0].header['comment'] = 'Cubo de dados de NGC 6445'
+#_____________________________________________________________________
+hdu2[0].header['CRVAL3'] = hdu2[0].header['CRVAL2']
+hdu2[0].header['CDELT3'] = hdu2[0].header['CDELT2'] 
+hdu2[0].header['CDELT2'] = 1 
+hdu2[0].header['CRVAL2'] = 1
+hdu2[0].header['CDELT1'] = 1 
+hdu2[0].header['CRVAL1'] = 1
+hdu2[0].header['CRPIX1'] = 1
+hdu2[0].header['CRPIX2'] = 1
+hdu2[0].header['CRPIX3'] = 1
+hdu2[0].header['CTYPE1'] = 'Linear '
+hdu2[0].header['CTYPE2'] = 'Linear  '
+hdu2[0].header['CTYPE3'] = 'Waveleght  ' 
+#_____________________________________________________________________ 
+hdu2.writeto('data_cubexx.fits', overwrite=True)
